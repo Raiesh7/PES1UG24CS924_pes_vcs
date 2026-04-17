@@ -132,6 +132,9 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 int tree_from_index(Index *index, ObjectID *tree_id) {
     if (!index || !tree_id) return -1;
 
+    Tree tree;
+    tree_init(&tree);
+
     for (size_t i = 0; i < index->count; i++) {
         IndexEntry *entry = &index->entries[i];
 
@@ -140,11 +143,30 @@ int tree_from_index(Index *index, ObjectID *tree_id) {
         path_copy[sizeof(path_copy) - 1] = '\0';
 
         char *token = strtok(path_copy, "/");
+        char *last = token;
+
         while (token) {
-            // placeholder for directory/file handling
+            last = token;
             token = strtok(NULL, "/");
         }
+
+        TreeEntry tentry;
+        memset(&tentry, 0, sizeof(TreeEntry));
+
+        tentry.mode = entry->mode;
+        strncpy(tentry.name, last, sizeof(tentry.name));
+        tentry.id = entry->id;
+
+        tree_add_entry(&tree, &tentry);
     }
 
-    return -1;
+    void *data = NULL;
+    size_t len = 0;
+
+    if (tree_serialize(&tree, &data, &len) != 0) return -1;
+
+    if (object_write(OBJ_TREE, data, len, tree_id) != 0) return -1;
+
+    free(data);
+    return 0;
 }

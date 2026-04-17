@@ -125,9 +125,62 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         return 0;
     }
 
-    // Step 6: (write not implemented yet)
+    // Step 6: generate object path
+    char path[512];
+    object_path(&id, path, sizeof(path));
+
+    // Extract directory path (.pes/objects/XX)
+    char dir[512];
+    strncpy(dir, path, sizeof(dir));
+    char *slash = strrchr(dir, '/');
+    if (!slash) {
+        free(full_obj);
+        return -1;
+    }
+    *slash = '\0';
+
+    // Step 7: create shard directory
+    mkdir(dir, 0755);
+
+    // Step 8: create temp file
+    char temp_path[512];
+    snprintf(temp_path, sizeof(temp_path), "%s/tmpXXXXXX", dir);
+
+    int fd = mkstemp(temp_path);
+    if (fd < 0) {
+        free(full_obj);
+        return -1;
+    }
+
+    // Step 9: write full object
+    if (write(fd, full_obj, total_len) != (ssize_t)total_len) {
+        close(fd);
+        free(full_obj);
+        return -1;
+    }
+
+    // Step 10: fsync file
+    fsync(fd);
+    close(fd);
+
+    // Step 11: atomic rename
+    if (rename(temp_path, path) != 0) {
+        free(full_obj);
+        return -1;
+    }
+
+    // Step 12: fsync directory
+    int dir_fd = open(dir, O_DIRECTORY);
+    if (dir_fd >= 0) {
+        fsync(dir_fd);
+        close(dir_fd);
+    }
+
+    // Step 13: return object ID
+    *id_out = id;
+
     free(full_obj);
-    return -1;
+    return 0;
 }
 // Read an object from the store.
 //

@@ -129,6 +129,12 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 //   - object_write    : save that binary buffer to the store as OBJ_TREE
 //
 // Returns 0 on success, -1 on error.
+int compare_entries(const void *a, const void *b) {
+    const TreeEntry *ea = (const TreeEntry *)a;
+    const TreeEntry *eb = (const TreeEntry *)b;
+    return strcmp(ea->name, eb->name);
+}
+
 int tree_from_index(Index *index, ObjectID *tree_id) {
     if (!index || !tree_id) return -1;
 
@@ -159,6 +165,9 @@ int tree_from_index(Index *index, ObjectID *tree_id) {
 
         tree_add_entry(&tree, &tentry);
     }
+
+    // 🔥 critical for test
+    qsort(tree.entries, tree.count, sizeof(TreeEntry), compare_entries);
 
     void *data = NULL;
     size_t len = 0;

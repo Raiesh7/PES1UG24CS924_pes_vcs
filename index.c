@@ -206,6 +206,9 @@ int index_save(const Index *index) {
     return 0;
 }
 // Stage a file for the next commit.
+// Forward declaration — object_write lives in object.c
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
+
 //
 // HINTS - Useful functions and syscalls:
 //   - fopen, fread, fclose             : reading the target file's contents
@@ -214,6 +217,7 @@ int index_save(const Index *index) {
 //   - index_find                       : checking if the file is already staged
 //
 // Returns 0 on success, -1 on error.
+
 int index_add(Index *index, const char *path) {
     // TODO: Implement file staging
     // (See Lab Appendix for logical steps)

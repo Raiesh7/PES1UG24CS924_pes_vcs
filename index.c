@@ -219,8 +219,46 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 // Returns 0 on success, -1 on error.
 
 int index_add(Index *index, const char *path) {
-    // TODO: Implement file staging
-    // (See Lab Appendix for logical steps)
-    (void)index; (void)path;
-    return -1;
+    // Read file contents
+    FILE *f = fopen(path, "rb");
+    if (!f) { fprintf(stderr, "error: cannot open '%s'\n", path); return -1; }
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (file_size < 0) { fclose(f); return -1; }
+
+    void *buf = malloc(file_size > 0 ? file_size : 1);
+    if (!buf) { fclose(f); return -1; }
+    if (file_size > 0 && fread(buf, 1, file_size, f) != (size_t)file_size) {
+        free(buf); fclose(f); return -1;
+    }
+    fclose(f);
+
+    // Write blob to object store
+    ObjectID blob_id;
+    if (object_write(OBJ_BLOB, buf, file_size, &blob_id) < 0) {
+        free(buf); return -1;
+    }
+    free(buf);
+
+    // Get file metadata
+    struct stat st;
+    if (lstat(path, &st) < 0) return -1;
+
+    // Update existing entry or create new one
+    IndexEntry *entry = index_find(index, path);
+    if (!entry) {
+        if (index->count >= MAX_INDEX_ENTRIES) return -1;
+        entry = &index->entries[index->count++];
+    }
+
+    entry->hash    = blob_id;
+    entry->mode    = (st.st_mode & S_IXUSR) ? 0100755 : 0100644;
+    entry->mtime_sec = (uint64_t)st.st_mtime;
+    entry->size    = (uint32_t)st.st_size;
+    strncpy(entry->path, path, sizeof(entry->path) - 1);
+    entry->path[sizeof(entry->path) - 1] = '\0';
+
+    return index_save(index);
 }

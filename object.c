@@ -93,7 +93,7 @@ int object_exists(const ObjectID *id) {
 
 //
 // Returns 0 on success, -1 on error.
-int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
+int object_write(...) {
     char header[64];
     const char *type_str;
 
@@ -104,7 +104,16 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 
     int header_len = snprintf(header, sizeof(header), "%s %zu", type_str, len) + 1;
 
-    (void)data; (void)id_out; (void)header_len;
+    size_t total_len = header_len + len;
+    char *full_obj = malloc(total_len);
+    if (!full_obj) return -1;
+
+    memcpy(full_obj, header, header_len);
+    memcpy(full_obj + header_len, data, len);
+
+    ObjectID id;
+    compute_hash(full_obj, total_len, &id);
+
     return -1;
 }
 

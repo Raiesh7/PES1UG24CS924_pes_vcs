@@ -134,7 +134,16 @@ int tree_from_index(Index *index, ObjectID *tree_id) {
 
     for (size_t i = 0; i < index->count; i++) {
         IndexEntry *entry = &index->entries[i];
-        (void)entry;
+
+        char path_copy[256];
+        strncpy(path_copy, entry->path, sizeof(path_copy));
+        path_copy[sizeof(path_copy) - 1] = '\0';
+
+        char *token = strtok(path_copy, "/");
+        while (token) {
+            // placeholder for directory/file handling
+            token = strtok(NULL, "/");
+        }
     }
 
     return -1;

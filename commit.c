@@ -200,8 +200,16 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
         fprintf(stderr, "error: nothing to commit (index is empty)\n");
         return -1;
     }
-         // Step 2: Get the parent commit (if any)
+    // Step 2: Get the parent commit (if any)
     ObjectID parent_id;
     int has_parent = (head_read(&parent_id) == 0) ? 1 : 0;
-    
+    // Step 3: Populate the Commit struct
+    Commit commit;
+    commit.tree = tree_id;
+    commit.has_parent = has_parent;
+    if (has_parent) commit.parent = parent_id;
+
+    snprintf(commit.author, sizeof(commit.author), "%s", pes_author());
+    commit.timestamp = (uint64_t)time(NULL);
+    snprintf(commit.message, sizeof(commit.message), "%s", message);
 }
